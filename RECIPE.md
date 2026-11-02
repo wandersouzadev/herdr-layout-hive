@@ -156,7 +156,9 @@ Top to bottom, left to right:
   everything so nothing becomes unreachable).
 - The panel stack needs all four mods installed; a missing mod shows an empty
   block. The Graph and GitHub panels need `git` and `gh` in the user's shell; the
-  GitHub panel is empty without an authenticated `gh`.
+  GitHub panel is empty without an authenticated `gh`. Its **Agent** button opens
+  the `issue-agent` mod, which is neither shipped by Herdr nor included here, so
+  the button does nothing unless the reader installs that mod.
 - `menu-custom` **replaces** Herdr's terminal and space menus entirely (it is the
   layout's `terminal_menu`), so its item list is the whole menu.
 - The layout sets no theme, fonts or colors: it follows `settings.json` and the
