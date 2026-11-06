@@ -3,10 +3,11 @@
 A Herdr layout for working across several repositories and their git worktrees at
 once: a chrome sidebar that groups spaces by machine, nests each repo's worktrees
 under it like folders you can open and close, an agents list underneath, tab pills
-with Files / Changes / Graph / GitHub buttons, terminal panes as rounded cards with
-a header, and a status bar. Copy `layouts/hive.json` and the `mods/` folders into
-`~/.config/herdr-app`, restart Herdr (or let it reload), and pick **Hive** in
-Settings → Look or with `ctrl-shift-l`.
+with Files / Changes / Graph / GitHub buttons plus an optional Insights button,
+terminal panes as rounded cards with a header, and a status bar. Copy
+`layouts/hive.json` and the `mods/` folders into `~/.config/herdr-app`, restart
+Herdr (or let it reload), and pick **Hive** in Settings → Look or with
+`ctrl-shift-l`.
 
 ![Hive](preview.png)
 
@@ -35,8 +36,9 @@ Top to bottom, left to right:
 - **Tab bar, 42 px** on `chrome`: tab pills 29 px high (`raised` when active, 7 px
   radius) with the program icon, the tab name, a native spinner while its agent
   works, a colored dot when blocked or done, and a close `×` on the active pill;
-  then `+`; then the panel buttons **Files**, **Changes**, **Graph**, **GitHub**;
-  on Windows, minimize / maximize / close at the far right.
+  then `+`; then the panel buttons **Files**, **Changes**, **Graph**, **GitHub**,
+  and **Insights** when the `insights` mod is installed; on Windows, minimize /
+  maximize / close at the far right.
 - **Panes**: a tab block with a 10 px radius card, 1 px `border` (accent while
   focused), 8 px gap, `background` fill, and a 30 px header drawn by the shipped
   `pane` mod (folder, branch, agent status, split / zoom / close). `lone: true`,
@@ -65,9 +67,13 @@ Top to bottom, left to right:
   down, so pressing it never starts a drag. In the 44 px rail there is no chevron,
   and worktrees are always listed.
 - **Machine groups fold** on a click on their header (remembered in
-  `localStorage["machines.folded"]`); the `+` in a header makes a space on that
-  machine. Worktrees are nested only when their repo's main checkout is also a
-  space; otherwise they stay top-level.
+  `localStorage["machines.folded"]`); the `+` in a header opens the **New space**
+  dialog for that machine. Worktrees are nested only when their repo's main
+  checkout is also a space; otherwise they stay top-level.
+- **New space** opens `new-space` as a modal: pick this computer or a connected
+  remote, type a path or use **Browse…** (local only), then **Create space**. The
+  first terminal starts in that folder; an empty path means the machine's home.
+  The `+` beside the "Spaces" title opens the same dialog for this computer.
 - **Narrower than 160 px** the spaces and agents panels switch to a rail: a number
   and a status dot per row, no names.
 - **Avatars** get one stable color from a six-color palette, shared through
@@ -77,8 +83,10 @@ Top to bottom, left to right:
   the wheel scrolls through tabs, `×` closes the active one, `+` opens the shipped
   `new-menu` popup (terminal or any installed agent). The panel buttons toggle the
   right panel: **Files** and **Changes** (from `shared("workspace.panels")`),
-  **Graph**, **GitHub**. Which panel a space has open is remembered per space in
-  `localStorage["panels"]`; switching spaces restores that space's choice.
+  **Graph**, **GitHub**. **Insights**, shown only when its mod is installed, focuses
+  the space's existing Insights tab or creates one. Which panel a space has open is
+  remembered per space in `localStorage["panels"]`; switching spaces restores that
+  space's choice.
 - **Agent state**: working shows the native spinner (`.spin(900)`, no timer),
   blocked and done show a dot in their theme color, idle shows nothing; the space
   and machine colors come from `theme()`, so the layout follows light/dark.
@@ -117,12 +125,16 @@ Top to bottom, left to right:
   "--porcelain=v2", "--branch"])`, `git rev-parse --show-toplevel` and
   `--git-common-dir` per space (on that space's machine), `hc machine ls --json`,
   and `watchFolder(repo)` for local repos. Commands: `space.select`, `space.move`,
-  `space.new`, `space.rename`, `space.close` through `menu-custom`.
-- `mods/tabs-graph` — a clone of `tabs` (0.1.10) with pills, the panel buttons and
-  the panel actions. Reads `spaces()`, `panes()`, `layout()`, `window()`,
-  `settings()`, `shared()`; runs `tab.select`, `tab.move`, `tab.rename`,
-  `tab.close`, `tab.next|prev`, `layout.show|hide|select`,
-  `window.minimize|maximize|close`, and `openOverlay(new-menu)`.
+  `space.new`, `space.rename`, `space.close` through `menu-custom`; the `+` buttons
+  call `openOverlay({ mod: "new-space", kind: "dialog", modal: true, props: { machine } })`
+  instead of creating a space directly.
+- `mods/tabs-graph` — a clone of `tabs` (0.1.10) with pills, the panel buttons, the
+  optional Insights button and the panel actions. Reads `spaces()`, `panes()`,
+  `layout()`, `window()`, `settings()`, `shared()`, plus `appHome()` and
+  `readTextFile()` to hide Insights when `mods/insights/mod.json` is absent; runs
+  `tab.select`, `tab.move`, `tab.rename`, `tab.close`, `tab.next|prev`,
+  `layout.show|hide|select`, `window.minimize|maximize|close`,
+  `openOverlay(new-menu)`, and `tab.new` / `pane.focus` / `pane.zoom` for Insights.
 - `mods/git-graph` — graph panel plus its right-click menu and dialogs
   (`graph.js`, `git.js`, `lanes.js`, `act.js`, `menu.js`, `dialog.js`); runs `git`
   in the space's folder and watches it. Icons include Lucide files under
@@ -135,8 +147,12 @@ Top to bottom, left to right:
   context-menu replacement: pane / tab / space / global items, **Copy path**
   (`cx.write_to_clipboard` plus a toast), the `worktree` dialog, theme picks and
   key hints. The layout wires it with the root `terminal_menu`.
-- Shipped mods it relies on: `workspace-chrome` (brand and footer), `agents`,
-  `pane`, `files`, `changes`, `workspace-status`, `new-menu`.
+- `mods/new-space` — the **New space** modal opened by `spaces-highlight`. Reads
+  `machines()`, `props()`, `theme()`, uses `InputState` / `Input`, `pickFolder()`
+  and `home()`; runs `space.new` with the chosen `machine` and `folder` and closes
+  its overlay. Its icons come from the shipped `workspace-chrome` mod.
+- Shipped mods it relies on: `workspace-chrome` (brand, footer and the dialog's
+  icons), `agents`, `pane`, `files`, `changes`, `workspace-status`, `new-menu`.
 
 ## Watch out
 
@@ -158,7 +174,11 @@ Top to bottom, left to right:
   block. The Graph and GitHub panels need `git` and `gh` in the user's shell; the
   GitHub panel is empty without an authenticated `gh`. Its **Agent** button opens
   the `issue-agent` mod, which is neither shipped by Herdr nor included here, so
-  the button does nothing unless the reader installs that mod.
+  the button does nothing unless the reader installs that mod. Likewise the
+  **Insights** button needs the `insights` mod; `tabs-graph` checks for
+  `mods/insights/mod.json` and hides the button when it is absent.
+- The `+` buttons in the sidebar open `new-space`; without that mod (not shipped by
+  Herdr) they open an overlay that cannot load. Copy all six folders.
 - `menu-custom` **replaces** Herdr's terminal and space menus entirely (it is the
   layout's `terminal_menu`), so its item list is the whole menu.
 - The layout sets no theme, fonts or colors: it follows `settings.json` and the
@@ -171,11 +191,15 @@ Top to bottom, left to right:
 
 ## Done when
 
-- `herdr-app check mods/spaces-highlight`, `mods/tabs-graph`, `mods/git-graph`,
-  `mods/github` and `mods/menu-custom` each print `check passed`.
+- `herdr-app check mods/spaces-highlight`, `mods/tabs-graph`, `mods/new-space`,
+  `mods/git-graph`, `mods/github` and `mods/menu-custom` each print `check passed`.
 - `herdr-app do layout.switch --name hive` (or `ctrl-shift-l`) shows the sidebar
   with machine groups, the agents list under it, tab pills with Files / Changes /
   Graph / GitHub, and a terminal card with a header.
+- Clicking a sidebar `+` opens the New space dialog; choosing a machine and folder
+  and pressing **Create space** makes the space and starts its first terminal there.
+- With the `insights` mod installed, an **Insights** button sits beside GitHub and
+  opens or focuses its dashboard tab; without it, no button is drawn.
 - On a repo with worktrees, clicking the chevron before the repo's avatar hides its
   worktree rows, turns the chevron right and shows a count pill; clicking again
   brings them back, and a restart keeps the fold.

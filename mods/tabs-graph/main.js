@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings, nextCommand } from "herdr";
+import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings, nextCommand, readTextFile, appHome } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -11,10 +11,30 @@ function find(node, id) {
   return null;
 }
 
+// One Insights tab per space: focus it if it exists, otherwise create it.
+function showInsights() {
+  const active = spaces().find(space => space.active);
+  const tabIds = new Set(active?.tabs.map(tab => tab.id) ?? []);
+  const open = panes().find(pane => pane.mod === "insights" && tabIds.has(pane.tab));
+  if (open) {
+    const zoomed = panes().find(pane => pane.tab === open.tab && pane.zoomed);
+    if (zoomed && zoomed.pane !== open.pane) run("pane.zoom", { pane: zoomed.pane });
+    return run("pane.focus", { pane: open.pane });
+  }
+  return run("tab.new", { name: "Insights", mod: "insights" });
+}
+
 export default class Tabs extends View {
   init(_props, cx) {
     this.pressed = null;
     this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+    // The Insights button only exists when its mod is installed.
+    this.insights = false;
+    cx.spawn(async (cx) => {
+      try { this.insights = Boolean(await readTextFile(`${appHome()}/mods/insights/mod.json`)); }
+      catch { this.insights = false; }
+      cx.notify();
+    });
     // Keys open a panel as its button does: "ctrl-shift-g": "tabs-graph.graph" in keys.json.
     cx.spawn(async (cx) => { for (;;) { this.togglePanel(await nextCommand()); cx.notify(); } });
   }
@@ -95,6 +115,11 @@ export default class Tabs extends View {
         .hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
         .on_click(() => this.togglePanel(id)).child(svg(icon).size(14)).child(label);
     };
+    const insightsButton = () => h_flex().id("insights-open-tab").h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+      .text_size(12).bg(t.chrome).text_color(t.muted)
+      .hover(s => s.bg(t.hover).text_color(t.foreground))
+      .on_mouse_down("left", stop).on_click(showInsights)
+      .child(svg("mods/insights/insights.svg").size(14)).child("Insights");
     return h_flex().size_full().min_w(0).px(10).pl(lightsPadding).gap(3).items_center().bg(t.chrome).border_b(1).border_color(t.border)
       .on_mouse_up("left", () => { this.pressed = null; })
       .on_scroll_wheel(e => { if (Math.abs(e.delta.y) >= 1) run(e.delta.y > 0 ? "tab.prev" : "tab.next"); })
@@ -104,6 +129,7 @@ export default class Tabs extends View {
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
       .child(panelButton("graph", "Graph", "mods/git-graph/icons/graph.svg"))
       .child(panelButton("github", "GitHub", "mods/github/github.svg"))
+      .when(this.insights, el => el.child(insightsButton()))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs-graph/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs-graph/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/tabs-graph/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

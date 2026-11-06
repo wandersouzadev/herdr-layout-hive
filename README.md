@@ -7,12 +7,13 @@
 One window, everything in sight: a sidebar that groups spaces by machine, nests
 each repository's worktrees under it like folders you can fold away, the agents
 list underneath, tabs as pills with one-click Files / Changes / Graph / GitHub
-panels, terminal panes drawn as rounded cards with a header, and a status bar.
+panels and an optional Insights button, terminal panes drawn as rounded cards with
+a header, and a status bar.
 
-Hive ships no program of its own: it is a layout file plus five mods. Everything
-runs inside Herdr, using Herdr's own commands and your existing `git` / `gh` — the
-one exception is the GitHub panel's optional **Agent** button, which needs a mod
-you install yourself.
+Hive ships no program of its own: it is a layout file plus six mods. Everything
+runs inside Herdr, using Herdr's own commands and your existing `git` / `gh`. Two
+buttons are optional and need mods you install yourself: the GitHub panel's
+**Agent** button and the tab bar's **Insights** button.
 
 ## Contents
 
@@ -41,7 +42,8 @@ you install yourself.
 - **Spaces grouped by machine.** One group per machine from `hc machine ls`, the
   local computer first. Each header has an icon, the machine name, a count pill, a
   `+` to create a space there, a connection dot, and a chevron that folds the whole
-  group.
+  group. The `+` opens a **New space** dialog where you pick the machine and the
+  folder the first terminal starts in.
 - **The whole repo, at a glance.** Each space shows its repo and branch only when
   they are not obvious from the name, plus `↑ahead` / `↓behind` when the branch
   has diverged.
@@ -52,6 +54,8 @@ you install yourself.
   `×` on the active pill.
 - **Panels on demand.** Files, Changes, Graph and GitHub open on the right; each
   space remembers which panel it had open.
+- **Optional Insights.** When the `insights` mod is installed, a button beside
+  GitHub opens its token-usage dashboard in a tab; without it the button is hidden.
 - **A real git panel.** Commit lanes with refs, fetch / push / pull, and the usual
   actions (checkout, branch, tag, stash, cherry-pick, revert, reset) behind
   confirmation dialogs.
@@ -73,6 +77,7 @@ you install yourself.
 | **git** | `spaces-highlight` runs `git status` / `git rev-parse` in each space; `git-graph` runs `git log`, `git fetch`, etc. Must be on the `PATH` of the shell Herdr starts, **on every machine** you show. |
 | **gh**, authenticated *(optional)* | Only the GitHub panel and its CI badge. Without it the panel is empty and says so. |
 | `issue-agent` mod *(optional)* | Only the **Agent** button in the GitHub panel. It is not part of Herdr nor of this repo; without it the button does nothing. |
+| `insights` mod *(optional)* | Only the **Insights** button in the tab bar. It is not part of Herdr nor of this repo; without it the button is hidden. |
 | Windows, macOS or Linux | Built and tested on Windows. The layout uses Herdr's `window_drag`, `titlebar: none` and `traffic_lights`, which Herdr handles on every platform. |
 
 Hive does not need Node, a bundler or a build step: mods are plain JavaScript that
@@ -80,7 +85,7 @@ Herdr loads directly.
 
 ## Installation
 
-Hive is just files. Installing means copying the layout and the five mod folders
+Hive is just files. Installing means copying the layout and the six mod folders
 into your Herdr home:
 
 - Windows: `%USERPROFILE%\.config\herdr-app`
@@ -131,7 +136,7 @@ herdr-app do layout.switch --name hive
 Ask Herdr to load each mod once and report errors:
 
 ```sh
-for m in spaces-highlight tabs-graph git-graph github menu-custom; do
+for m in spaces-highlight tabs-graph new-space git-graph github menu-custom; do
   herdr-app check ~/.config/herdr-app/mods/$m
 done
 ```
@@ -141,14 +146,15 @@ from layouts and mods, and a broken file leaves a `<name>.error` next to it.
 
 ### If a mod name is already taken
 
-Hive's five folders are `spaces-highlight`, `tabs-graph`, `git-graph`, `github`
-and `menu-custom`. Herdr ships `spaces`, `tabs` and `menu`, so the clone names are
-normally free — but you may already have your own `github` or `git-graph`. **Do not
-overwrite them.** Instead rename the incoming folder and update the references:
+Hive's six folders are `spaces-highlight`, `tabs-graph`, `new-space`, `git-graph`,
+`github` and `menu-custom`. Herdr ships `spaces`, `tabs` and `menu`, so the clone
+names are normally free — but you may already have your own `github` or
+`git-graph`. **Do not overwrite them.** Instead rename the incoming folder and
+update the references:
 
 - `layouts/hive.json`: the `content.mod` values and the root `terminal_menu`.
 - `mods/spaces-highlight/main.js`: opens the `menu-custom` overlay for a space's
-  right-click menu.
+  right-click menu, and the `new-space` dialog for a new space.
 - `mods/git-graph/*.js`: opens `git-graph` itself for its menu and dialogs.
 - Any `mods/<name>/...` asset path inside the JavaScript (icons, SVGs).
 
@@ -165,7 +171,7 @@ the mods locally, merge rather than overwrite.
    `herdr-app do layout.switch --name main`).
 2. Delete `layouts/hive.json` and, if present, `layouts/.state/hive.json` (the
    per-layout click state).
-3. Delete the five mod folders under `mods/`.
+3. Delete the six mod folders under `mods/`.
 4. Restart Herdr.
 
 Your spaces, tabs and terminals are untouched — they live in `herdr-core`, not in
@@ -184,6 +190,11 @@ are listed, a `+` to create a space on that machine, a connected dot and a fold
 chevron. Clicking the header folds the group; the state is kept in
 `localStorage["machines.folded"]`. The count pill counts the rows the group lists,
 so a folded repo's worktrees are not counted separately.
+
+**New space.** The `+` in a machine header, the `+` beside "Spaces", and the
+"New space there" row open a dialog: pick the machine (this computer or a
+connected remote), type or browse a folder, then **Create space**. The first
+terminal starts there; an empty path means the machine's home folder.
 
 **Spaces.** Click a row to switch to that space. Drag it up or down to reorder it
 inside its machine — the row dims and a 2 px accent line shows where it will land.
@@ -221,6 +232,8 @@ The 42 px tab bar has:
 - Click to select, double-click to rename, drag to reorder, wheel to scroll.
 - **`+`** opens Herdr's `new-menu`: a terminal or any installed agent.
 - **Files**, **Changes**, **Graph**, **GitHub** toggle the right panel.
+- **Insights** (when the `insights` mod is installed) opens its dashboard in a tab,
+  beside GitHub. The button is hidden when that mod is missing.
 - On Windows, **minimize / maximize / close** are drawn by the mod; on macOS the
   system traffic lights sit over the layout and the bar reserves room for them.
 
@@ -382,9 +395,12 @@ layout file's values are the defaults.
   toggle.
 - **Wider sidebar / panel:** change `size.px`; the minimums and maximums are in
   the table above.
-- **Fewer buttons in the tab bar:** the `graph` and `github` buttons are added by
-  `tabs-graph`; edit `mods/tabs-graph/main.js` (and re-run
+- **Fewer buttons in the tab bar:** the `graph`, `github` and optional `insights`
+  buttons are added by `tabs-graph`; edit `mods/tabs-graph/main.js` (and re-run
   `herdr-app check`) if you do not want them.
+- **New space dialog:** `spaces-highlight` opens the `new-space` mod; change its
+  `openNewSpace` overlay or remove the mod and call `space.new` directly if you
+  prefer the old immediate behavior.
 - **Worktree fold:** click a repo's chevron. The state lives in the
   `spaces-highlight` mod's local storage; the space list itself is in
   `herdr-core`.
@@ -398,6 +414,7 @@ layout file's values are the defaults.
 ├── mods/
 │   ├── spaces-highlight/   # spaces sidebar (clone of Herdr's `spaces` 0.1.10)
 │   ├── tabs-graph/         # tab bar + panel buttons (clone of Herdr's `tabs` 0.1.10)
+│   ├── new-space/          # New space dialog: machine + folder picker
 │   ├── git-graph/          # commit panel, its menu and confirm dialogs
 │   ├── github/             # PR / issue panel and CI badge
 │   └── menu-custom/        # context menu replacement (clone of Herdr's `menu` 0.1.11)
@@ -424,9 +441,13 @@ Shipped mods Hive relies on (do **not** copy these; Herdr provides them):
 
 The mods read Herdr's live data (`spaces()`, `panes()`, `machines()`,
 `agents()`, `theme()`, `shared()`) and act through Herdr commands
-(`space.select`, `tab.close`, `layout.show`, `pane.split`, …). They make no HTTP
-requests of their own; the network activity is Herdr's (remote machines) plus
-whatever `gh` and your browser do.
+(`space.select`, `tab.close`, `layout.show`, `pane.split`, …). Creating a space
+opens the `new-space` overlay first; it reads `machines()`, uses Herdr's
+`pickFolder()` and then runs `space.new` with the chosen machine and folder. The
+tab bar shows the **Insights** button only when `mods/insights/mod.json` exists
+(`readTextFile` + `appHome()`); clicking it focuses or creates the space's
+Insights tab. They make no HTTP requests of their own; the network activity is
+Herdr's (remote machines) plus whatever `gh` and your browser do.
 
 External programs:
 
@@ -464,6 +485,8 @@ change the layout meaningfully.
 | Graph is empty | The space is not a git repo, or `git` is not on that machine's `PATH` | Open a terminal in the space and run `git log`. |
 | GitHub says “No GitHub remote in this repo” or is empty | No remote, or `gh` missing / not authenticated | `gh auth login`, then reopen the panel. |
 | The GitHub **Agent** button does nothing | The optional `issue-agent` mod is not installed (it does not ship with Herdr or this repo) | Install `issue-agent` into `mods/`, or use the button's URL to open the issue instead. |
+| The **Insights** button is missing | The optional `insights` mod is not installed; the button only renders when `mods/insights/mod.json` exists | Install `insights` into `mods/`, then reopen Hive. |
+| A `+` does nothing, or “New space” never opens | The `new-space` mod is not installed | Copy `mods/new-space/` into the app home; `spaces-highlight` opens it as a dialog. |
 | A panel is blank | Its mod is missing | Install `files`, `changes`, `git-graph`, `github`; restart Herdr. |
 | The right-click menu is missing items | `menu-custom` is not installed, or another layout's `terminal_menu` points elsewhere | Check the app home's `mods/menu-custom` and the root `terminal_menu` in `hive.json`. |
 | Window buttons are missing | macOS draws its traffic lights instead | Normal; the layout reserves room for them at `traffic_lights`. |
@@ -490,8 +513,10 @@ change the layout meaningfully.
 - **The menu is replaced.** `menu-custom` is wired as the layout's
   `terminal_menu`; its item list *is* the terminal and space menu. Removing the
   mod without changing the layout leaves you with Herdr's fallback menu.
-- **One external dependency.** The GitHub panel's **Agent** button opens the
-  `issue-agent` mod, which this repo does not ship. Everything else works with
+- **Two optional external dependencies.** The GitHub panel's **Agent** button opens
+  the `issue-agent` mod, and the tab bar's **Insights** button opens the `insights`
+  mod. Neither is shipped by Herdr or this repo. Without `issue-agent` its button
+  does nothing; without `insights` its button is hidden. Everything else works with
   Herdr and `git` / `gh` alone.
 - **Sizes are defaults.** Dragging dividers writes to `layouts/.state/hive.json`.
   The layout file holds the original numbers.
